@@ -58,21 +58,21 @@ class MCPG(object):
 			batch_data = {
 				'state':[],
 				'action':[],
-				'reward':[]
+				'return':[]
 			}
 			batch_data['state'].append(self.episode_data['state'][-1])
 			batch_data['action'].append(self.episode_data['action'][-1])
-			batch_data['reward'].append(self.episode_data['reward'][-1])
+			batch_data['return'].append(self.episode_data['reward'][-1])
 
 			for i in reversed(range(time_steps-1)):
-				ret = self.episode_data['reward'][i] + self.discount*batch_data['reward'][-1]
+				ret = self.episode_data['reward'][i] + self.discount*batch_data['return'][-1]
 				batch_data['state'].append(self.episode_data['state'][i])
 				batch_data['action'].append(self.episode_data['action'][i])
-				batch_data['reward'].append(ret)
+				batch_data['return'].append(ret)
 
 			batch_data_s = mx.nd.array(batch_data['state'])
 			batch_data_a = mx.nd.array(batch_data['action'])
-			batch_data_r = mx.nd.array(batch_data['reward'])
+			batch_data_r = mx.nd.array(batch_data['return'])
 
 			with mx.autograd.record():
 				probs = self.policy.forward(batch_data_s)

@@ -1,4 +1,4 @@
-from MCPG import MCPG
+from TD import TD
 import gym 
 env = gym.make('CartPole-v0')
 # env = gym.make('MountainCar-v0')
@@ -9,7 +9,7 @@ statespace = 4#env.observation_space 2
 
 
 def run(max_episode, show=False, train=False):
-	agent = MCPG(layers, hidden, actionspace, statespace)
+	agent = TD(layers, hidden, actionspace, statespace)
 
 	episode = 0
 	while True:

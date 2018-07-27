@@ -24,6 +24,7 @@ def run(max_episode, show=False, train=False):
 			pre_state = state
 			action, index = agent.get_action(state)
 			state, r, done, _ = env.step(index)
+
 			if train:
 				agent.train(pre_state, action, r, done)
 

@@ -27,7 +27,7 @@ class Approxmater(gluon.nn.Block):
 		'''
 		shape of input: batchsize * statespace
 		'''
-		probs = mx.nd.softmax(self.net(input), axis=1)
+		qvals = self.net(input)
 
-		return probs
+		return qvals
 
