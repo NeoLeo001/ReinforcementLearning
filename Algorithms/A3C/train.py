@@ -1,6 +1,7 @@
 from A3C import A3C
 import gym 
 import threading
+import mxnet as mx
 # env = gym.make('MountainCar-v0')
 layers = 4
 hidden = 16
@@ -10,13 +11,15 @@ Tmax = 10000
 threads = 4
 T = 0
 lock = threading.Lock()
-
 target_agent = A3C(layers, hidden, actionspace, statespace)
 
-def thread_process():
+def thread_process(name):
+	print name + ' starts ...'
 	env = gym.make('CartPole-v0')
 	global Tmax, T, lock, target_agent
 	thread_agent = A3C(layers, hidden, actionspace, statespace)
+	# trainer doesn't work here
+	optimizer = mx.optimizer.Adam(learning_rate=0.001)
 
 	while Tmax > T:
 
@@ -34,24 +37,33 @@ def thread_process():
 		lock.acquire()
 		try:
 			thread_agent.actor_backward()
-			target_agent.copyto_grads(thread_agent.get_grads())
-			target_agent.update()
+			a = target_agent.get_params()
+			b = thread_agent.get_grads()
+			for i in range(len(a)):
+				optimizer.update(T, a[i], b[i], optimizer.create_state(T, a[i]))
+			
+
 			thread_agent.critic_backward()
-			target_agent.copyto_grads(thread_agent.get_grads())
-			target_agent.update()
-			target_agent.policy.collect_params().zero_grad()
+			a = target_agent.get_params()
+			b = thread_agent.get_grads()
+			for i in range(len(a)):
+				optimizer.update(T, a[i], b[i], optimizer.create_state(T, a[i]))
+			
+		except:
+			print('Fail to get a lock!')
 		finally:
 			lock.release()
 
-		thread_agent.policy.collect_params().zero_grad()
 		thread_agent.copyto_params(target_agent.get_params())
 
 	env.close()
+	print(name + ' ends ...')
 
 
-def target_run(show=False, train=False):
+def target_run(name, show=False, train=False):
+	print(name + ' starts ...')
 	env = gym.make('CartPole-v0')
-	global Tmax, T, target_agent, lock
+	global Tmax, T, lock, target_agent
 	
 	while Tmax > T:
 
@@ -71,12 +83,13 @@ def target_run(show=False, train=False):
 		print count
 
 	env.close()
+	print(name + ' ends ...')
 
 if __name__ == '__main__':
-	main = threading.Thread(target=target_run)
+	main = threading.Thread(target=target_run, args=('Target',))
 	main.start()
 	for i in range(threads):
-		t = threading.Thread(target=thread_process)
+		t = threading.Thread(target=thread_process, args=('Subthreading %s'%str(i),))
 		t.start()
 
 

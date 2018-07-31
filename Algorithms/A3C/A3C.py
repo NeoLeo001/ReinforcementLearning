@@ -35,7 +35,8 @@ class A3C(object):
 			'action':[],
 			'reward':[]
 		}
-		self.trainer = gluon.Trainer(self.policy.collect_params(), 'adam', {'learning_rate': 0.0001, 'wd':1e-4})
+		# self.trainer = gluon.Trainer(self.policy.collect_params(), 'adam', {'learning_rate': 0.0001, 'wd':1e-4, 'clip_gradient':1.0})
+		# self.optimizer = mx.optimizer.Adam(learning_rate=0.001)
 
 	def _reset_data(self):
 		self.episode_data = {
@@ -81,7 +82,9 @@ class A3C(object):
 			batch_data['return'].append(self.episode_data['reward'][-1])
 
 			for i in reversed(range(time_steps-1)):
+				# one-step update
 				# sval = np.squeeze(self.policy.forward_critic(mx.nd.array(batch_data['state'][-1]).reshape((-1, self.statespace))).asnumpy())
+				# Monte Carlo update
 				sval = batch_data['return'][-1]
 				ret = self.episode_data['reward'][i] + self.discount*sval
 				batch_data['state'].append(self.episode_data['state'][i])
@@ -102,7 +105,7 @@ class A3C(object):
 			# svals = self.policy.forward_critic(batch_data_s)
 			advs = self.batch_data_r - self.batch_data_v
 			action_prob = mx.nd.sum(probs*self.batch_data_a, axis=1).reshape((self.batch_size,))
-			logprobs = (mx.nd.log(action_prob+ 1e-10)*advs).reshape((self.batch_size,))
+			logprobs = (mx.nd.log(action_prob)*advs).reshape((self.batch_size,))
 			actor_loss = -1.0/self.batch_size*mx.nd.sum(logprobs, axis=0).reshape((1,))
 
 		actor_loss.backward()
@@ -116,8 +119,12 @@ class A3C(object):
 
 		critic_loss.backward()
 
-	def update(self):
-		self.trainer.step(1, ignore_stale_grad=True)
+	# index: count of update for the parameter
+	# w: weight
+	# g: grad
+	# def update(self, index, w, g):
+	# 	# self.trainer.step(1, ignore_stale_grad=True)
+	# 	self.optimizer.update(index, w, g, self.optimizer.create_state(index, w))
 
 	def get_params(self):
 		params_list = []
@@ -132,13 +139,14 @@ class A3C(object):
 
 		assert len(params_list) == len(params)
 		for i in range(len(params_list)):
-			params[i].set_data(params_list[i])
+			params[i].set_data(mx.nd.array(params_list[i].asnumpy()))
+			# print params[i].name
 
 	def get_grads(self):
 		grads_list = []
 		for name, value in self.policy.collect_params().items():
 			if name.find('batchnorm') < 0:
-				grads_list.append(value.grad())
+				grads_list.append(mx.nd.array(value.grad().asnumpy()))
 		return grads_list
 
 	def copyto_grads(self, grads_list):
@@ -149,7 +157,8 @@ class A3C(object):
 
 		assert len(grads_list) == len(values)
 		for i in range(len(grads_list)):
-			values[i]._grad = grads_list[i]
+			for arr in values[i]._check_and_get(values[i]._grad, list):
+				arr[:] = grads_list[i]
 
 
 

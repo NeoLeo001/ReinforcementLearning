@@ -12,16 +12,27 @@ class Approximator(gluon.nn.Block):
 		self.dropout = dropout
 
 		with self.name_scope():
-			self.net = gluon.nn.Sequential()
-			with self.net.name_scope():
-				self.net.add(gluon.nn.Dense(units=self.hidden, in_units=self.statespace, activation=self.activation))
-				# self.net.add(gluon.nn.BatchNorm(axis=-1))
-				self.net.add(gluon.nn.Dropout(self.dropout))
+			self.net1 = gluon.nn.Sequential()
+			with self.net1.name_scope():
+				self.net1.add(gluon.nn.Dense(units=self.hidden, in_units=self.statespace, activation=self.activation))
+				# self.net1.add(gluon.nn.BatchNorm(axis=-1))
+				self.net1.add(gluon.nn.Dropout(self.dropout))
 				if self.layers > 2:
 					for i in range(self.layers-2):
-						self.net.add(gluon.nn.Dense(units=self.hidden, in_units=self.hidden, activation=self.activation))
-						# self.net.add(gluon.nn.BatchNorm(axis=-1))
-						self.net.add(gluon.nn.Dropout(self.dropout))
+						self.net1.add(gluon.nn.Dense(units=self.hidden, in_units=self.hidden, activation=self.activation))
+						# self.net1.add(gluon.nn.BatchNorm(axis=-1))
+						self.net1.add(gluon.nn.Dropout(self.dropout))
+
+			self.net2 = gluon.nn.Sequential()
+			with self.net2.name_scope():
+				self.net2.add(gluon.nn.Dense(units=self.hidden, in_units=self.statespace, activation=self.activation))
+				# self.net2.add(gluon.nn.BatchNorm(axis=-1))
+				self.net2.add(gluon.nn.Dropout(self.dropout))
+				if self.layers > 2:
+					for i in range(self.layers-2):
+						self.net2.add(gluon.nn.Dense(units=self.hidden, in_units=self.hidden, activation=self.activation))
+						# self.net2.add(gluon.nn.BatchNorm(axis=-1))
+						self.net2.add(gluon.nn.Dropout(self.dropout))
 
 			self.actor = gluon.nn.Dense(units=self.actionspace, in_units=self.hidden, activation=self.activation, prefix='actor')
 			self.critic = gluon.nn.Dense(units=1, in_units=self.hidden, activation='sigmoid', prefix='critic')
@@ -30,7 +41,7 @@ class Approximator(gluon.nn.Block):
 		'''
 		shape of input: batchsize * statespace
 		'''
-		tmp = self.actor(self.net(input))
+		tmp = self.actor(self.net1(input))
 		probs = mx.nd.softmax(tmp, axis=1)
 
 		return probs
@@ -39,7 +50,7 @@ class Approximator(gluon.nn.Block):
 		'''
 		shape of input: batchsize * statespace
 		'''
-		sval = self.critic(self.net(input))
+		sval = self.critic(self.net2(input))
 
 		return sval
 
