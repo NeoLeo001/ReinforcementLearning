@@ -42,7 +42,6 @@ def thread_process(name):
 			for i in range(len(a)):
 				optimizer.update(T, a[i], b[i], optimizer.create_state(T, a[i]))
 			
-
 			thread_agent.critic_backward()
 			a = target_agent.get_params()
 			b = thread_agent.get_grads()
