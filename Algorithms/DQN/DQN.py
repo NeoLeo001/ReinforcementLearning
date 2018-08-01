@@ -17,15 +17,16 @@ class DQN(object):
 				 hidden, 
 				 actionspace, 
 				 statespace, 
-				 lr=0.0001, 
+				 lr=0.00001, 
 				 dropout=0.1, 
 				 activation='tanh', 
-				 discount=0.9, 
+				 discount=0.8, 
 				 epsilon=0.9, 
-				 epsilon_wd=0.00001,
+				 epsilon_wd=0.001,
 				 memory=10000,
 				 start_turn=100,
 				 batch_size=32,
+				 update_period=100,
 				  *args, **kwargs):
 
 		super(DQN, self).__init__(*args, **kwargs)
@@ -37,13 +38,14 @@ class DQN(object):
 		self.epsilon_wd = epsilon_wd
 		self.start_turn = start_turn # start to train when size of the replay memory reaches to 'start_turn'
 		self.batch_size = batch_size
+		self.update_period = update_period
 		assert start_turn > batch_size
 		self.policy = Approxmater(layers, hidden, actionspace, statespace, dropout, activation)
 		self.target_policy = Approxmater(layers, hidden, actionspace, statespace, dropout, activation)
 		self.policy.collect_params().initialize(mx.init.Xavier())
 		self.target_policy.collect_params().initialize(mx.init.Xavier())
 
-		self.trainer = gluon.Trainer(self.policy.collect_params(), 'adagrad', {'learning_rate': lr, 'wd':1e-4})
+		self.trainer = gluon.Trainer(self.policy.collect_params(), 'adagrad', {'learning_rate': lr})
 		self.replayMemory = ReplayMemory(memory, actionspace, statespace)
 		self.turn = 0
 		self._copyto_target()
@@ -89,8 +91,6 @@ class DQN(object):
 		for i in range(len(params)):
 			target_params[i].set_data(params[i])
 
-
-
 	def train(self, state, action, reward, nextstate):
 		self._feed(state, action, reward, nextstate)
 		self.turn += 1
@@ -130,11 +130,5 @@ class DQN(object):
 				loss.backward()
 			self.trainer.step(self.batch_size)
 
-		self._copyto_target()
-
-
-
-
-			
-			
-
+		if self.turn % self.update_period:
+			self._copyto_target()
